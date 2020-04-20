@@ -208,7 +208,7 @@ font.weight         : bold
 ## small, medium, large, x-large, xx-large, larger, or smaller
 font.size           : 13.0
 #font.serif          : DejaVu Serif, Bitstream Vera Serif, Computer Modern Roman, New Century Schoolbook, Century Schoolbook L, Utopia, ITC Bookman, Bookman, Nimbus Roman No9 L, Times New Roman, Times, Palatino, Charter, serif
-font.sans-serif     : Helvetica Neue, Lucida Grande, Verdana, Geneva, Lucid, Arial, Avant Garde, sans-serif
+font.sans-serif     : Helvetica Neue, Lucida Grande, Verdana, Geneva, Lucid, Arial, Avant Garde, DejaVu Sans, sans-serif
 #font.cursive        : Apple Chancery, Textile, Zapf Chancery, Sand, Script MT, Felipa, cursive
 #font.fantasy        : Comic Sans MS, Chicago, Charcoal, ImpactWestern, Humor Sans, xkcd, fantasy
 #font.monospace      : DejaVu Sans Mono, Bitstream Vera Sans Mono, Computer Modern Typewriter, Andale Mono, Nimbus Mono L, Courier New, Courier, Fixed, Terminal, monospace
@@ -295,7 +295,7 @@ axes.linewidth      : 1     ## edge linewidth
 #axes.grid.axis      : both    ## which axis the grid should apply to
 #axes.grid.which     : major   ## gridlines at major, minor or both ticks
 axes.titlesize      : 14   ## fontsize of the axes title
-axes.titlelocation   : center
+#axes.titlelocation  : center
 axes.titleweight    : normal  ## font weight of title
 axes.titlepad       : 10.0     ## pad between axes and title in points
 #axes.labelsize      : medium  ## fontsize of the x any y labels
