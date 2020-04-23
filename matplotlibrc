@@ -198,7 +198,7 @@
 #font.family         : sans-serif
 font.style          : normal
 font.variant        : normal
-font.weight         : bold
+font.weight         : normal
 #font.stretch        : normal
 
 ## note that font.size controls default text sizes.  To configure
