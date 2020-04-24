@@ -1,10 +1,32 @@
 {% extends 'layout.html' %}
 
 {% block content %}
+    <h3> New Cases Per Day</h3>
     <div class="container">
-        <h1>{{title}}</h1>
-        <p>{{description}}</p>
-        <p>{{ name }}</p>
-        <img src={{ url}} alt="Chart">
+        <table>
+        {%- for row in d_c_images|batch(6, '&nbsp;') %}
+            <tr>
+                {%- for image in row %}
+                    <td><img src="{{resized_img_src('images/daily_cases/' + image, width=300, height=400, mode='fit', quality=95)}}"  /></td>
+                {%- endfor %}
+            </tr>
+        {%- endfor %}
+        </table>
+    </div>
+    <h3> Daily Posterior of Rt</h3>
+    <div class="container">
+        <table>
+        {%- for row in dist_images|batch(6, '&nbsp;') %}
+            <tr>
+                {%- for image in row %}
+                    <td><img src="{{resized_img_src('images/distribution/' + image, width=300, height=400, mode='fit', quality=95)}}" /></td>
+                {%- endfor %}
+            </tr>
+        {%- endfor %}
+        </table>
+
+    </div>
+    <div class="container">
+        <img src="{{resized_img_src('images/plot.png')}}" />
     </div>
 {% endblock %}

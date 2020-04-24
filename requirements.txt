@@ -3,9 +3,9 @@ cycler==0.10.0
 Flask==1.1.2
 itsdangerous==1.1.0
 Jinja2==2.11.2
-kiwisolver==1.2.0
+kiwisolver
 MarkupSafe==1.1.1
-matplotlib==3.2.1
+matplotlib
 numpy==1.18.3
 pandas==1.0.3
 pyparsing==2.4.7

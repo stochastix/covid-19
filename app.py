@@ -7,6 +7,9 @@ from matplotlib.dates import date2num, num2date
 from matplotlib import dates as mdates
 from matplotlib import ticker
 from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
+
+
 from scipy import stats as sps
 from scipy.interpolate import interp1d
 import pandas as pd
@@ -16,10 +19,14 @@ import urllib.request
 from flask import render_template
 from flask import Flask
 import os
+from flask_images import Images
+
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 app = Flask(__name__)
+app.secret_key = 'monkey'
+images = Images(app)
 
 state_names = {
  'an': 'Andaman & Nicobar',
@@ -86,7 +93,10 @@ def highest_density_interval(pmf, p=.9):
     return pd.Series([low, high],
                      index=[f'Low_{p * 100:.0f}',
                             f'High_{p * 100:.0f}'])
-def prepare_cases(cases, cutoff=10):
+
+
+state_name = 'Bihar'
+def prepare_cases(cases, cutoff=1):
     new_cases = cases.diff()
     smoothed = new_cases.rolling(7,
                                  win_type='gaussian',
@@ -96,6 +106,8 @@ def prepare_cases(cases, cutoff=10):
     smoothed = smoothed.iloc[idx_start:]
     original = new_cases.loc[smoothed.index]
     return original, smoothed
+
+
 
 def get_posteriors(sr, sigma=0.15):
     # (1) Calculate Lambda
@@ -149,6 +161,12 @@ def get_posteriors(sr, sigma=0.15):
         log_likelihood += np.log(denominator)
 
     return posteriors, log_likelihood
+
+def max_date(posteriors, offset=-1):
+    try:
+        return str(posteriors.axes[1][offset][1].date())
+    except Exception as e:
+        return None
 
 def plot_rt(result, ax, state_name):
     ax.set_title(f"{state_name}")
@@ -227,7 +245,7 @@ def save_plot():
     # # Evaluated the Probability Mass Function (remember: poisson is discrete)
     y = sps.poisson.pmf(k, lambdas)
     #
-    fig, ax = plt.subplots()
+    #fig, ax = plt.subplots()
     # ax.set(title='Poisson Distribution of Cases\n $p(k|\lambda)$')
     # plt.plot(k, y,
     #          marker='o',
@@ -344,7 +362,7 @@ def save_plot():
         if cumulative > 1000:
             STATES_1000_PLUS.add(state_name)
 
-    # state_name = 'India'
+    state_name = 'Bihar'
     cases = states.xs(state_name).rename(f"{state_name} cases")
     original, smoothed = prepare_cases(cases)
     # original.plot(title=f"{state_name} New Cases per Day",
@@ -385,14 +403,36 @@ def save_plot():
     ax.xaxis.set_major_locator(mdates.WeekdayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
     sigmas = np.linspace(1 / 20, 1, 20)
+
     targets = ~states.index.get_level_values('state').isin(FILTERED_REGIONS)
     states_to_process = states.loc[targets]
+
     results = {}
+
     for state_name, cases in states_to_process.groupby(level='state'):
-        print(state_name)
         new, smoothed = prepare_cases(cases, cutoff=10)
+
         if len(smoothed) == 0:
-            new, smoothed = prepare_cases(cases, cutoff=3)
+            new, smoothed = prepare_cases(cases, cutoff=1)
+        fig, ax = plt.subplots(figsize=(600 / 72, 400 / 72))
+        ax.plot(new.xs(state_name),
+                c='k',
+                linestyle=':',
+                alpha=.5,
+                label='Actual')
+        ax.plot(smoothed.xs(state_name),
+                label='Smoothed',
+                c='r')
+        leg = ax.legend(ncol=1,
+                        loc='upper left',
+                        columnspacing=.75)
+        ax.set_title(f'{state_name} New Cases per Day')
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+
+        fig.set_facecolor('w')
+        fig.savefig(current_path+'/static/images/daily_cases/' + state_name + '_daily_cases.png', bbox_inches='tight')
+        plt.cla()
         result = {}
 
         # Holds all posteriors with every given value of sigma
@@ -413,6 +453,7 @@ def save_plot():
         except ValueError as e:
             print('Encountered an error while computing posteriors for ' + state_name)
             print(str(e))
+    plt.close(fig)
     # Each index of this array holds the total of the log likelihoods for
     # the corresponding index of the sigmas array.
     total_log_likelihoods = np.zeros_like(sigmas)
@@ -443,9 +484,42 @@ def save_plot():
             else:
                 final_results = pd.concat([final_results, result])
             # clear_output(wait=True)
+            MAX_DATE = max_date(posteriors, -1)
+            MAX_DATE_MINUS_1 = max_date(posteriors, -2)
+            MAX_DATE_MINUS_2 = max_date(posteriors, -3)
+            ax = posteriors.plot(title=f'{state_name} - Daily Posterior for $R_t$',
+                                 legend=False,
+                                 lw=1,
+                                 c='k',
+                                 alpha=.3,
+                                 xlim=(0.4, 6))
+            if MAX_DATE_MINUS_2:
+                ax.plot(posteriors.filter(like=MAX_DATE_MINUS_2), c='b')
+            if MAX_DATE_MINUS_1:
+                ax.plot(posteriors.filter(like=MAX_DATE_MINUS_1), c='g')
+            if MAX_DATE:
+                ax.plot(posteriors.filter(like=MAX_DATE), c='r')
+            ax.set_xlabel('$R_t$');
+
+            leg = ax.legend(handles=[
+                Patch(label='yesterday', color='r'),
+                Patch(label='2 days ago', color='g'),
+                Patch(label='3 days ago', color='b'),
+                Patch(label='4+ days ago', color='k', alpha=.3),
+            ],
+                ncol=1,
+                loc='upper right',
+                columnspacing=.75,
+                handletextpad=.5,
+                handlelength=1)
+
+            fig = ax.get_figure()
+            fig.savefig(current_path+'/static/images/distribution/' + state_name + '_daily_R_t_distribution.png')
+            plt.cla()
         except ValueError as e:
             print('Error while processing ' + state_name)
             print(str(e))
+    plt.close(fig)
     ncols = 4
     nrows = int(np.ceil(len(results) / ncols))
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(15, nrows * 3))
@@ -455,13 +529,15 @@ def save_plot():
     fig.set_facecolor('w')
     #plt.plot()
     fig.savefig(current_path+'/static/images/plot.png')
-
+    plt.close(fig)
 
 
 
 @app.route("/", methods=["GET"])
-def plotv_iew():
-    return render_template('home.html', name='new_plot', url='/static/images/plot.png')
+def plot_view():
+    daily_cases_images = os.listdir(os.path.join(app.static_folder, "images/daily_cases/"))
+    distribution_images = os.listdir(os.path.join(app.static_folder, "images/distribution/"))
+    return render_template('home.html', d_c_images=daily_cases_images, dist_images=distribution_images)
 
 @app.route("/get_plot", methods=["GET"])
 def get_plot():
